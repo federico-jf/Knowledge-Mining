@@ -1,4 +1,5 @@
-## Welcome!
+## Welcome to my repository!
+Federico Ferrero
 
 You can use the [editor on GitHub](https://github.com/federico-jf/Knowledge-Mining/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
 
