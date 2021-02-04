@@ -3,22 +3,9 @@ Federico Ferrero
 
 # [Lab 01](Lab01.html)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# [Lab 02]
+# [Lab 03]
+# [Lab 04]
 
 
 You can use the [editor on GitHub](https://github.com/federico-jf/Knowledge-Mining/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
