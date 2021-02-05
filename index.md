@@ -3,7 +3,7 @@ Federico Ferrero
 
 # [Lab 01](Lab01.html)
 
-# [Lab 02](Lab01.html)
+# [Lab 02](Lab02.html)
 # [Lab 03]
 # [Lab 04]
 
