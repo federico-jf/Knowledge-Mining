@@ -5,7 +5,7 @@ Federico Ferrero
 
 ## [Lab 02](Lab02.html)
 
-## [Lab 03]
+## [Lab 03](Lab03.html)
 
 ## [Lab 04]
 
