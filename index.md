@@ -6,6 +6,6 @@ Federico Ferrero
 ### [Lab 03](Lab03.html)
 ### [Lab 04](Lab04.html)
 ### [Lab 05](Lab05.html)
-### [Assignment 4](https://raw.githubusercontent.com/federico-jf/Knowledge-Mining/gh-pages/Assignment_4.html)
+### [Assignment 4](Assignment_4.html)
 
 
