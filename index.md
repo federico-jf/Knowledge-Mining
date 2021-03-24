@@ -10,7 +10,7 @@ Federico Ferrero
 #### [Assignment 3](Assignment_3.html)
 #### [Assignment 4](Assignment_4.html)
 #### [Assignment 5](Assignment_5.html)
-#### [Assignment 6](https://github.com/federico-jf/Knowledge-Mining/blob/gh-pages/Assignment_6.R)
+#### [Assignment 6](Assignment_6.html)
 
 
 
