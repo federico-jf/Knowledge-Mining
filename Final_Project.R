@@ -7,7 +7,18 @@ rm(list=ls())
 # set your working directory path
 setwd("C:/Users/feder/Desktop/km_project")
 
-# Argentine Aprender Evaluation
+############################################
+############################################
+############################################
+############################################
+############################################
+###### ARGENTINE APRENDER EVALUATION #######
+############################################
+############################################
+############################################
+############################################
+############################################
+
 
 # Reading in the data
 mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset.txt")
@@ -15,12 +26,7 @@ mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset.t
 # names of variables
 names(mydata)
 
-# checking for linearity (for each predictor against the dep variable) with scatterplots
-scatter.smooth(x=mydata$sector, y=mydata$ldesemp,  xlab="Sector", ylab="Language Performance",
-               sub="1= Public  2= Private",
-               main="Language performance ~ Sector (Public/Private)")  
-
-# Boxplots
+# Performance by Sector and Ambit
 par(mfrow=c(2, 2))
 boxplot(ldesemp~sector,data=mydata, main="Language Performance by Sector", sub="1= Public  2= Private",
         xlab="Sector", ylab="Language Performance", col="orange")
@@ -49,6 +55,22 @@ barplot(counts2, main="Math Performance Level by Gender", sub="1= Male 2= Female
         
 dev.off()
 
+# Performance by School Repetition and Students Who Work
+par(mfrow=c(2, 2))
+boxplot(ldesemp~repitencia_dicotomica,data=mydata, main="Language Performance by School Repetition", sub="1= Repeated School Grade  2= Non Repeated School Grade  3= No answer",
+        xlab="School Repetition", ylab="Language Performance", col="pink")
+
+boxplot(mdesemp~repitencia_dicotomica,data=mydata, main="Math Performance by School Repetition", sub="1= Repeated School Grade  2= Non Repeated School Grade  3= No answer",
+        xlab="School Repetition", ylab="Math Performance", col="pink")
+
+boxplot(ldesemp~trabaja_fuera_hogar,data=mydata, main="Language Performance by Students Who Work", sub="1= Yes  2= No  3= No answer",
+        xlab="Students Who Work", ylab="Language Performance", col="darkkhaki")
+
+boxplot(mdesemp~trabaja_fuera_hogar,data=mydata, main="Math Performance by Students Who Work", sub="1= Yes  2= No  3= No answer",
+        xlab="Students Who Work", ylab="Math Performance", col="darkkhaki")
+
+dev.off()
+
 # Performance by Socioeconomic level
 
 par(mfrow=c(1, 2))
@@ -70,15 +92,59 @@ dev.off()
 # correlations using subset of variables (until 15 variables)
 library(ggplot2)
 library(GGally)
+mydata[,c("ldesemp","mdesemp","gender")]
 mydata[,c("ldesemp","mdesemp","gender","sector","ambito","isocioa")]
 
-# regressions
-fit1=lm(mdesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa),data=mydata)
+# initial regressions
+fit1=lm(mdesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa), data=mydata)
 summary(fit1)
 
+fit2=lm(ldesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa),data=mydata)
+summary(fit2)
 
-# GRADUATE admission case
-# clear your memory
+# create a table with  model outputs
+library('stargazer')
+stargazer(list(fit1, fit2),
+          title = "Comparing Regression models", 
+          covariate.labels = 'Female', 
+          out="table3.txt")
+
+# FINDING BEST MODEL
+# Reading in the data
+mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset_to_subset.txt")
+
+# save for me 1 best model per subset size
+library(leaps)
+?regsubsets
+leaps1<- regsubsets(ldesemp ~., data= mydata, nbest=1, method = "backward") 
+summary(leaps1)
+
+leaps2<- regsubsets(mdesemp ~., data= mydata, nbest=1, method = "forward") 
+summary(leaps2)
+
+# plot statistics by subset size (rsq, cp, adjr2, bic, rss)
+dev.off()
+library(car)
+par(mfrow=c(2, 2))
+
+subsets(leaps2, statistic="bic", xlim=c(-100,120), legend = FALSE)
+subsets(leaps2, statistic="cp", xlim=c(-100,120), legend = FALSE)
+subsets(leaps2, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
+
+?subsets
+######################################
+######################################
+######################################
+######################################
+######################################
+###### GRADUATE admission case #######
+######################################
+######################################
+######################################
+######################################
+######################################
+
+# clear memory
 rm(list=ls())
 
 # reading in the data
@@ -153,6 +219,7 @@ stargazer(list(fit1, fit2),
           title = "Testing regression models", 
           covariate.labels = 'GRE.Score', 
           out="table1.txt")
+
 # 3D visualization
 library(plotly)
 plot <- plot_ly(mydata, 
@@ -162,3 +229,27 @@ plot <- plot_ly(mydata,
                      type = "scatter3d", 
                      size = 0.02)
 plot
+
+# Subset: finding the best model for the data. Save for me 1 best model per subset size
+library(leaps)
+leaps<- regsubsets(Chance.of.Admit ~., data= mydata, nbest=1, method = "exhaustive")
+summary(leaps)
+
+# plot statistics by subset size (rsq, cp, adjr2, bic, rss)
+dev.off()
+library(car)
+par(mfrow=c(2, 2))
+
+subsets(leaps, statistic="bic")
+subsets(leaps, statistic="cp")
+subsets(leaps, statistic="adjr2")
+
+# clustering
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+## Create cluster using k-means, k = 3
+library(factoextra)
+?eclust
+admission.km <- eclust(mydata, "kmeans", k.max=3)
