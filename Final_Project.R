@@ -1,5 +1,7 @@
+# EPPS 6323: Knowledge Mining
 # Final Project Knowledge Mining
-# Federico Ferrero
+# Dr. Karl Ho
+# Student: Federico Ferrero
 
 # clear your memory
 rm(list=ls())
@@ -109,29 +111,90 @@ stargazer(list(fit1, fit2),
           covariate.labels = 'Female', 
           out="table3.txt")
 
-# FINDING BEST MODEL
+# FINDING BEST MODEL for Argentine Aprender Evaluation
 # Reading in the data
 mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset_to_subset.txt")
 
-# save for me 1 best model per subset size
+# save for me 1 best model per subset size for language performance and math performance
 library(leaps)
 ?regsubsets
 leaps1<- regsubsets(ldesemp ~., data= mydata, nbest=1, method = "backward") 
 summary(leaps1)
 
+
 leaps2<- regsubsets(mdesemp ~., data= mydata, nbest=1, method = "forward") 
 summary(leaps2)
 
-# plot statistics by subset size (rsq, cp, adjr2, bic, rss)
-dev.off()
-library(car)
-par(mfrow=c(2, 2))
+# How many predictors are the optimal number when predicting language performance?
+leaps_summary1 <- summary(leaps1)
+require(tidyverse);require(ggplot2);require(ggthemes);
 
+data_frame(Cp = leaps_summary1$cp,
+           BIC = leaps_summary1$bic,
+           AdjR2 = leaps_summary1$adjr2) %>%
+        mutate(id = row_number()) %>%
+        gather(value_type, value, -id) %>%
+        ggplot(aes(id, value, col = value_type)) +
+        geom_line() + geom_point() + ylab('') + xlab('Number of Variables Used') +
+        facet_wrap(~ value_type, scales = 'free') + scale_x_continuous(breaks = 1:10)
+
+# 5 seems to be the better number of predictors for the model when predicting language performance
+# (with high AdjR2 and low BIC and Cp)
+
+# plot statistics by subset size (rsq, cp, adjr2, bic, rss) when predicting language performance
+library(car)
+
+subsets(leaps1, statistic="bic", xlim=c(-100,120), legend = FALSE)
+subsets(leaps1, statistic="cp", xlim=c(-100,120), legend = FALSE)
+subsets(leaps1, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
+
+# 5 best predictors for language performance: 
+# 1) mdesemp= Math performance
+# 2) ap22= Do you receive payment for the job you do outside your home?
+# 3) a39_01= How difficult are the following activities for you? Understanding a text
+# 4) isocioa= Student's socio-economical index
+# 5) sobreedad= Extra age
+
+# How many predictors are the optimal number when predicting math performance?
+leaps_summary2 <- summary(leaps2)
+
+data_frame(Cp = leaps_summary2$cp,
+           BIC = leaps_summary2$bic,
+           AdjR2 = leaps_summary2$adjr2) %>%
+        mutate(id = row_number()) %>%
+        gather(value_type, value, -id) %>%
+        ggplot(aes(id, value, col = value_type)) +
+        geom_line() + geom_point() + ylab('') + xlab('Number of Variables Used') +
+        facet_wrap(~ value_type, scales = 'free') + scale_x_continuous(breaks = 1:10)
+
+# 8 seems to be the better number of predictors for the model when predicting math performance
+# (with high AdjR2 and low BIC and Cp)
+
+# 7 best predictors for language performance (one was deleted because it wasn't conceptually relevant): 
+# 1) ldesemp= Language performance
+# 2) sector= Sector (either public or private)
+# 3) gender= Gender
+# 4) ap26= Absenteeism. So far this year, how many times have you missed school?
+# 5) ap39_02= How difficult do you find the following activities? Writing a text
+# 6) ap40_01= To what extent do you agree with the following statements? I enjoy studying Mathematics
+# 7) isocia= Student's socio-economical index
+
+# plot statistics by subset size (rsq, cp, adjr2, bic, rss) when predicting math performance
+library(car)
 subsets(leaps2, statistic="bic", xlim=c(-100,120), legend = FALSE)
 subsets(leaps2, statistic="cp", xlim=c(-100,120), legend = FALSE)
-subsets(leaps2, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
+subsets(leaps, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
 
-?subsets
+# running regressions according to the results obtained in subset selection
+
+# initial regressions
+rightfit_lang=lm(ldesemp~ mdesemp + ap22 + factor(isocioa) + sobreedad, data=mydata)
+summary(rightfit_lang)
+
+rightfit_math=lm(mdesemp~ ldesemp + factor(sector)+ factor(gender) +
+                         ap26 + ap39_02 + ap40_01 + factor(isocioa),data=mydata)
+summary(rightfit_math)
+
 ######################################
 ######################################
 ######################################
@@ -253,3 +316,4 @@ library(RColorBrewer)
 library(factoextra)
 ?eclust
 admission.km <- eclust(mydata, "kmeans", k.max=3)
+
