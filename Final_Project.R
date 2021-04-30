@@ -195,6 +195,120 @@ rightfit_math=lm(mdesemp~ ldesemp + factor(sector)+ factor(gender) +
                          ap26 + ap39_02 + ap40_01 + factor(isocioa),data=mydata)
 summary(rightfit_math)
 
+#
+#
+#
+#
+#
+#
+#
+#
+#Decision trees
+library("rpart")
+library("rpart.plot")
+library("rattle")
+
+# AER Package (AER: Applied Econometrics with R)
+library(AER)
+
+# Subset data including predictor variables
+tree_base <- subset(mydata, select = c(ldesemp, mdesemp, ap22, isocioa, sobreedad))
+bankcard <- subset(CreditCard, select = c(card, reports, age, income, owner, months))
+
+# create new dataset without missing data
+tree_base <- na.omit(tree_base)
+
+# Recode ldesemp as dummy (1 for satisfactory and advanced, 0 for basic and below)
+
+tree_base$ldesemp <- ifelse(tree_base$ldesemp >= "3", 1, 0);
+set.seed(1001)
+
+bankcard$card <- ifelse(bankcard$card == "yes", 1, 0);
+set.seed(1001)
+
+# Order data by row number
+new_tree_base <- tree_base[sample(nrow(tree_base)),]
+
+newbankcard <- bankcard[sample(nrow(bankcard)),]
+
+# Indexing for training data (selection of 70 % of data)
+t_idx <- sample(seq_len(nrow(tree_base)), size = round(0.70 * nrow(tree_base)))
+
+# Build train and test data
+traindata <- new_tree_base[t_idx,]
+testdata <- new_tree_base[ - t_idx,]
+
+# Decision tree model
+dtree_lang <- rpart::rpart(formula = ldesemp ~ ., data = traindata, method = "class", control = rpart.control(cp = 0.001)) # complexity parameter
+
+# Plot Decision tree 
+rattle::fancyRpartPlot(dtree_lang, type = 1, main = "Decision tree", caption = "Accomplish at Least Satisfactory Language Performance Level" )
+
+resultdt <- predict(dtree_lang, newdata = testdata, type = "class")
+
+# Confusion matrix
+cm_langdt <- table(testdata$ldesemp, resultdt, dnn = c("Actual", "Predicted"))
+cm_langdt
+
+# Predicted Accomplish rate
+cm_langdt[4] / sum(cm_langdt[, 2])
+
+# Predicted Not Accomplish rate 
+cm_langdt[1] / sum(cm_langdt[, 1])
+
+# Accuracy
+accuracydt <- sum(diag(cm_langdt)) / sum(cm_langdt)
+accuracydt
+
+# install.packages("party") 
+library(party)
+
+# Conditional Inference Tree
+cit <- ctree(ldesemp~ ., data = traindata)
+plot(cit, main = "Conditional Inference Tree")
+
+# Confusion matrix
+cm_langcit = table(testdata$ldesemp, round(predict(cit, newdata = testdata)), dnn = c("Actual", "Predicted"))
+cm_langcit
+
+# Predicted Approval rate
+cm_langcit[4] / sum(cm_langcit[, 2])
+
+# Predicted Denial rate
+cm_langcit[1] / sum(cm_langcit[, 1])
+
+# Accuracy
+accuracycit <- sum(diag(cm_langcit)) / sum(cm_langcit)
+accuracycit
+
+# Random Forest
+# install.packages("randomForest")
+#library(randomForest)
+#set.seed(1001)
+
+# randomForest model
+#rf_lang <- randomForest(ldesemp ~ ., data = traindata, importance = T, proximity = T, do.trace = 100)
+#plot(rf_lang)
+
+#round(importance(rf_lang), 3) # to three decimal place
+
+#resultrf <- predict(rf_lang, newdata = testdata)
+#resultrf_Accomplish <- ifelse(resultrf > 0.6, 1, 0)
+
+# Confusion matrix
+#cm_creditcardrf <- table(testdata$card, resultrf_Approved, dnn = c("Actual", "Predicted"))
+#cm_creditcardrf
+
+# Predicted Approval rate
+#cm_creditcardrf[4] / sum(cm_creditcardrf[, 2])
+
+# Predicted Denial rate
+#cm_creditcardrf[1] / sum(cm_creditcardrf[, 1])
+
+# Accuracy
+#accuracyrf <- sum(diag(cm_creditcardrf)) / sum(cm_creditcardrf)
+#accuracyrf
+
 ######################################
 ######################################
 ######################################
@@ -316,4 +430,6 @@ library(RColorBrewer)
 library(factoextra)
 ?eclust
 admission.km <- eclust(mydata, "kmeans", k.max=3)
+
+
 
