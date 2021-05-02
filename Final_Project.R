@@ -25,8 +25,16 @@ setwd("C:/Users/feder/Desktop/km_project")
 # Reading in the data
 mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset.txt")
 
+
 # names of variables
 names(mydata)
+
+# scatterplot ldesmp~mdesemp
+
+scatterplot(ldesemp ~ mdesemp, data=mydata,
+            xlab="Math Performance", ylab="Language Performance",
+            main="Language Performance by Math Performance")
+
 
 # Performance by Sector and Ambit
 par(mfrow=c(2, 2))
@@ -48,13 +56,16 @@ dev.off()
 par(mfrow=c(1, 2))
 
 counts1 <- table(mydata$ldesemp, mydata$gender)
-barplot(counts1, main="Languaje Performance Level by Gender", sub="1= Male 2= Female 3= Other",
-        xlab="Gender", col=c("red","orange","lightblue","forestgreen"))
+barplot(counts1, main="Language Performance Level by Gender", sub="1= Male 2= Female 3= Other",
+        xlab="Gender", col=c("red","orange","lightblue","forestgreen"), ylim=c(0,20000))
+    
 
 counts2 <- table(mydata$mdesemp, mydata$gender)
 barplot(counts2, main="Math Performance Level by Gender", sub="1= Male 2= Female 3= Other",
-        xlab="Gender", col=c("red","orange","lightblue","forestgreen"))
-        
+        xlab="Gender", col=c("red","orange","lightblue","forestgreen"),
+        legend.text = c("Low", "Basic", "Satisf.", "Adv."), ylim=c(0,20000))
+
+
 dev.off()
 
 # Performance by School Repetition and Students Who Work
@@ -78,38 +89,20 @@ dev.off()
 par(mfrow=c(1, 2))
 
 counts1 <- table(mydata$ldesemp, mydata$isocioa)
-barplot(counts1, main="Languaje Performance Level by Socioeconomic Level", sub="-1=Non Answer, 1= Low 2= Medium 3= High",
-        xlab="Socioeconomic Level", col=c("red","orange","lightblue","forestgreen"))
+barplot(counts1, main="Language Performance by Socioeconomic Level", sub="-1=Non Answer, 1= Low 2= Medium 3= High",
+        xlab="Socioeconomic Level", col=c("red","orange","lightblue","forestgreen"), ylim=c(0,20000))
+        
 
 counts2 <- table(mydata$mdesemp, mydata$isocioa)
-barplot(counts2, main="Math Performance Level by Socioeconomic Level", sub="-1=Non Answer, 1= Low 2= Medium 3= High",
-        xlab="Socioeconomic Level", col=c("red","orange","lightblue","forestgreen"))
+barplot(counts2, main="Math Performance by Socioeconomic Level", sub="-1=Non Answer, 1= Low 2= Medium 3= High",
+        xlab="Socioeconomic Level", col=c("red","orange","lightblue","forestgreen"),
+        legend.text = c("Low", "Basic", "Satisf.", "Adv."), ylim=c(0,20000))
 
 # percentages in tables
 prop.table(counts1)
 prop.table(counts2)
 
 dev.off()
-
-# correlations using subset of variables (until 15 variables)
-library(ggplot2)
-library(GGally)
-mydata[,c("ldesemp","mdesemp","gender")]
-mydata[,c("ldesemp","mdesemp","gender","sector","ambito","isocioa")]
-
-# initial regressions
-fit1=lm(mdesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa), data=mydata)
-summary(fit1)
-
-fit2=lm(ldesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa),data=mydata)
-summary(fit2)
-
-# create a table with  model outputs
-library('stargazer')
-stargazer(list(fit1, fit2),
-          title = "Comparing Regression models", 
-          covariate.labels = 'Female', 
-          out="table3.txt")
 
 # FINDING BEST MODEL for Argentine Aprender Evaluation
 # Reading in the data
@@ -181,13 +174,12 @@ data_frame(Cp = leaps_summary2$cp,
 
 # plot statistics by subset size (rsq, cp, adjr2, bic, rss) when predicting math performance
 library(car)
-subsets(leaps2, statistic="bic", xlim=c(-100,120), legend = FALSE)
+subsets(leaps2, statistic="bic", xlim=c(-100,120), ylim=c(-13500,-9300), legend = FALSE)
 subsets(leaps2, statistic="cp", xlim=c(-100,120), legend = FALSE)
-subsets(leaps, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
+subsets(leaps2, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
 
 # running regressions according to the results obtained in subset selection
 
-# initial regressions
 rightfit_lang=lm(ldesemp~ mdesemp + ap22 + factor(isocioa) + sobreedad, data=mydata)
 summary(rightfit_lang)
 
@@ -195,14 +187,12 @@ rightfit_math=lm(mdesemp~ ldesemp + factor(sector)+ factor(gender) +
                          ap26 + ap39_02 + ap40_01 + factor(isocioa),data=mydata)
 summary(rightfit_math)
 
-#
-#
-#
-#
-#
-#
-#
-#
+# create a table with  model outputs
+library('stargazer')
+stargazer(list(rightfit_lang, rightfit_math),
+          title = "Comparing Regression models outputs", 
+          out="table1.txt")
+
 #Decision trees
 library("rpart")
 library("rpart.plot")
@@ -215,21 +205,29 @@ library(AER)
 tree_base <- subset(mydata, select = c(ldesemp, mdesemp, ap22, isocioa, sobreedad))
 bankcard <- subset(CreditCard, select = c(card, reports, age, income, owner, months))
 
+# rename variables
+names(tree_base)[1] <- "lang_perf"
+names(tree_base)[2] <- "math_perf"
+names(tree_base)[3] <- "job_pay"
+names(tree_base)[4] <- "socioeconom"
+names(tree_base)[5] <- "overage"
+
+
 # create new dataset without missing data
 tree_base <- na.omit(tree_base)
 
 # Recode ldesemp as dummy (1 for satisfactory and advanced, 0 for basic and below)
 
-tree_base$ldesemp <- ifelse(tree_base$ldesemp >= "3", 1, 0);
+tree_base$lang_perf <- ifelse(tree_base$lang_perf >= "3", 1, 0);
 set.seed(1001)
 
-bankcard$card <- ifelse(bankcard$card == "yes", 1, 0);
-set.seed(1001)
+#bankcard$card <- ifelse(bankcard$card == "yes", 1, 0);
+#set.seed(1001)
 
 # Order data by row number
 new_tree_base <- tree_base[sample(nrow(tree_base)),]
 
-newbankcard <- bankcard[sample(nrow(bankcard)),]
+#newbankcard <- bankcard[sample(nrow(bankcard)),]
 
 # Indexing for training data (selection of 70 % of data)
 t_idx <- sample(seq_len(nrow(tree_base)), size = round(0.70 * nrow(tree_base)))
@@ -239,7 +237,7 @@ traindata <- new_tree_base[t_idx,]
 testdata <- new_tree_base[ - t_idx,]
 
 # Decision tree model
-dtree_lang <- rpart::rpart(formula = ldesemp ~ ., data = traindata, method = "class", control = rpart.control(cp = 0.001)) # complexity parameter
+dtree_lang <- rpart::rpart(formula = lang_perf ~ ., data = traindata, method = "class", control = rpart.control(cp = 0.001)) # complexity parameter
 
 # Plot Decision tree 
 rattle::fancyRpartPlot(dtree_lang, type = 1, main = "Decision tree", caption = "Accomplish at Least Satisfactory Language Performance Level" )
@@ -247,7 +245,7 @@ rattle::fancyRpartPlot(dtree_lang, type = 1, main = "Decision tree", caption = "
 resultdt <- predict(dtree_lang, newdata = testdata, type = "class")
 
 # Confusion matrix
-cm_langdt <- table(testdata$ldesemp, resultdt, dnn = c("Actual", "Predicted"))
+cm_langdt <- table(testdata$lang_perf, resultdt, dnn = c("Actual", "Predicted"))
 cm_langdt
 
 # Predicted Accomplish rate
@@ -264,11 +262,11 @@ accuracydt
 library(party)
 
 # Conditional Inference Tree
-cit <- ctree(ldesemp~ ., data = traindata)
+cit <- ctree(lang_perf~ ., data = traindata)
 plot(cit, main = "Conditional Inference Tree")
 
 # Confusion matrix
-cm_langcit = table(testdata$ldesemp, round(predict(cit, newdata = testdata)), dnn = c("Actual", "Predicted"))
+cm_langcit = table(testdata$lang_perf, round(predict(cit, newdata = testdata)), dnn = c("Actual", "Predicted"))
 cm_langcit
 
 # Predicted Approval rate
@@ -431,5 +429,22 @@ library(factoextra)
 ?eclust
 admission.km <- eclust(mydata, "kmeans", k.max=3)
 
+# correlations using subset of variables (until 15 variables)
+library(ggplot2)
+library(GGally)
+mydata[,c("ldesemp","mdesemp")]
+mydata[,c("ldesemp","mdesemp","gender","sector","ambito","isocioa")]
 
+# initial regressions
+fit1=lm(mdesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa), data=mydata)
+summary(fit1)
 
+fit2=lm(ldesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa),data=mydata)
+summary(fit2)
+
+# create a table with  model outputs
+library('stargazer')
+stargazer(list(fit1, fit2),
+          title = "Comparing Regression models", 
+          covariate.labels = 'Female', 
+          out="table3.txt")
