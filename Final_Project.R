@@ -1,5 +1,6 @@
 # EPPS 6323: Knowledge Mining
 # Final Project Knowledge Mining
+# Academic Analytics: Predictions around Argentine “Aprender” National Evaluation
 # Dr. Karl Ho
 # Student: Federico Ferrero
 
@@ -9,19 +10,6 @@ rm(list=ls())
 # set your working directory path
 setwd("C:/Users/feder/Desktop/km_project")
 
-############################################
-############################################
-############################################
-############################################
-############################################
-###### ARGENTINE APRENDER EVALUATION #######
-############################################
-############################################
-############################################
-############################################
-############################################
-
-
 # Reading in the data
 mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset.txt")
 
@@ -30,11 +18,9 @@ mydata <- read.delim("/Users/feder/Desktop/km_project/aprender_cordoba_dataset.t
 names(mydata)
 
 # scatterplot ldesmp~mdesemp
-
 scatterplot(ldesemp ~ mdesemp, data=mydata,
             xlab="Math Performance", ylab="Language Performance",
             main="Language Performance by Math Performance")
-
 
 # Performance by Sector and Ambit
 par(mfrow=c(2, 2))
@@ -163,6 +149,12 @@ data_frame(Cp = leaps_summary2$cp,
 # 8 seems to be the better number of predictors for the model when predicting math performance
 # (with high AdjR2 and low BIC and Cp)
 
+# plot statistics by subset size (rsq, cp, adjr2, bic, rss) when predicting math performance
+library(car)
+subsets(leaps2, statistic="bic", xlim=c(-100,120), ylim=c(-13500,-9300), legend = FALSE)
+subsets(leaps2, statistic="cp", xlim=c(-100,120), legend = FALSE)
+subsets(leaps2, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
+
 # 7 best predictors for language performance (one was deleted because it wasn't conceptually relevant): 
 # 1) ldesemp= Language performance
 # 2) sector= Sector (either public or private)
@@ -172,15 +164,9 @@ data_frame(Cp = leaps_summary2$cp,
 # 6) ap40_01= To what extent do you agree with the following statements? I enjoy studying Mathematics
 # 7) isocia= Student's socio-economical index
 
-# plot statistics by subset size (rsq, cp, adjr2, bic, rss) when predicting math performance
-library(car)
-subsets(leaps2, statistic="bic", xlim=c(-100,120), ylim=c(-13500,-9300), legend = FALSE)
-subsets(leaps2, statistic="cp", xlim=c(-100,120), legend = FALSE)
-subsets(leaps2, statistic="adjr2", xlim=c(-100,100), legend=FALSE)
-
 # running regressions according to the results obtained in subset selection
 
-rightfit_lang=lm(ldesemp~ mdesemp + ap22 + factor(isocioa) + sobreedad, data=mydata)
+rightfit_lang=lm(ldesemp~ mdesemp + ap22 + ap39_01 +factor(isocioa) + sobreedad, data=mydata)
 summary(rightfit_lang)
 
 rightfit_math=lm(mdesemp~ ldesemp + factor(sector)+ factor(gender) +
@@ -193,7 +179,7 @@ stargazer(list(rightfit_lang, rightfit_math),
           title = "Comparing Regression models outputs", 
           out="table1.txt")
 
-#Decision trees
+# Decision trees for Language Performance Prediction
 library("rpart")
 library("rpart.plot")
 library("rattle")
@@ -203,7 +189,6 @@ library(AER)
 
 # Subset data including predictor variables
 tree_base <- subset(mydata, select = c(ldesemp, mdesemp, ap22, isocioa, sobreedad))
-bankcard <- subset(CreditCard, select = c(card, reports, age, income, owner, months))
 
 # rename variables
 names(tree_base)[1] <- "lang_perf"
@@ -221,13 +206,8 @@ tree_base <- na.omit(tree_base)
 tree_base$lang_perf <- ifelse(tree_base$lang_perf >= "3", 1, 0);
 set.seed(1001)
 
-#bankcard$card <- ifelse(bankcard$card == "yes", 1, 0);
-#set.seed(1001)
-
 # Order data by row number
 new_tree_base <- tree_base[sample(nrow(tree_base)),]
-
-#newbankcard <- bankcard[sample(nrow(bankcard)),]
 
 # Indexing for training data (selection of 70 % of data)
 t_idx <- sample(seq_len(nrow(tree_base)), size = round(0.70 * nrow(tree_base)))
@@ -240,7 +220,7 @@ testdata <- new_tree_base[ - t_idx,]
 dtree_lang <- rpart::rpart(formula = lang_perf ~ ., data = traindata, method = "class", control = rpart.control(cp = 0.001)) # complexity parameter
 
 # Plot Decision tree 
-rattle::fancyRpartPlot(dtree_lang, type = 1, main = "Decision tree", caption = "Accomplish at Least Satisfactory Language Performance Level" )
+rattle::fancyRpartPlot(dtree_lang, type = 1, main = "Decision tree: Language Performance", caption = "Accomplish at Least Satisfactory Language Performance Level" )
 
 resultdt <- predict(dtree_lang, newdata = testdata, type = "class")
 
@@ -261,7 +241,7 @@ accuracydt
 # install.packages("party") 
 library(party)
 
-# Conditional Inference Tree
+# Conditional Inference Tree: Language Performance
 cit <- ctree(lang_perf~ ., data = traindata)
 plot(cit, main = "Conditional Inference Tree")
 
@@ -279,172 +259,75 @@ cm_langcit[1] / sum(cm_langcit[, 1])
 accuracycit <- sum(diag(cm_langcit)) / sum(cm_langcit)
 accuracycit
 
-# Random Forest
-# install.packages("randomForest")
-#library(randomForest)
-#set.seed(1001)
+# Decision trees for Math Performance Prediction
+# Subset data including predictor variables
+tree_base <- subset(mydata, select = c(mdesemp, ldesemp, sector, gender, ap26,
+                                            ap39_02, ap40_01, isocioa))
 
-# randomForest model
-#rf_lang <- randomForest(ldesemp ~ ., data = traindata, importance = T, proximity = T, do.trace = 100)
-#plot(rf_lang)
+# rename variables
+names(tree_base)[1] <- "math_perf"
+names(tree_base)[2] <- "lang_perf"
+names(tree_base)[5] <- "absent"
+names(tree_base)[6] <- "dif_writing"
+names(tree_base)[7] <- "enjoy_math"
+names(tree_base)[8] <- "socioeconom"
 
-#round(importance(rf_lang), 3) # to three decimal place
+# create new dataset without missing data
+tree_base <- na.omit(tree_base)
 
-#resultrf <- predict(rf_lang, newdata = testdata)
-#resultrf_Accomplish <- ifelse(resultrf > 0.6, 1, 0)
+# Recode ldesemp as dummy (1 for satisfactory and advanced, 0 for basic and below)
+
+tree_base$math_perf <- ifelse(tree_base$math_perf >= "3", 1, 0);
+set.seed(1001)
+
+# Order data by row number
+new_tree_base <- tree_base[sample(nrow(tree_base)),]
+
+# Indexing for training data (selection of 70 % of data)
+t_idx <- sample(seq_len(nrow(tree_base)), size = round(0.70 * nrow(tree_base)))
+
+# Build train and test data
+traindata <- new_tree_base[t_idx,]
+testdata <- new_tree_base[ - t_idx,]
+
+# Decision tree model
+dtree_math <- rpart::rpart(formula = math_perf ~ ., data = traindata, method = "class", control = rpart.control(cp = 0.001)) # complexity parameter
+
+# Plot Decision tree 
+rattle::fancyRpartPlot(dtree_math, type = 1, main = "Decision tree: Math Performance", caption = "Accomplish at Least Satisfactory Math Performance Level" )
+
+resultdt <- predict(dtree_math, newdata = testdata, type = "class")
 
 # Confusion matrix
-#cm_creditcardrf <- table(testdata$card, resultrf_Approved, dnn = c("Actual", "Predicted"))
-#cm_creditcardrf
+cm_mathdt <- table(testdata$math_perf, resultdt, dnn = c("Actual", "Predicted"))
+cm_mathdt
 
-# Predicted Approval rate
-#cm_creditcardrf[4] / sum(cm_creditcardrf[, 2])
+# Predicted Accomplish rate
+cm_mathdt[4] / sum(cm_mathdt[, 2])
 
-# Predicted Denial rate
-#cm_creditcardrf[1] / sum(cm_creditcardrf[, 1])
+# Predicted Not Accomplish rate 
+cm_mathdt[1] / sum(cm_mathdt[, 1])
 
 # Accuracy
-#accuracyrf <- sum(diag(cm_creditcardrf)) / sum(cm_creditcardrf)
-#accuracyrf
+accuracydt <- sum(diag(cm_mathdt)) / sum(cm_mathdt)
+accuracydt
 
-######################################
-######################################
-######################################
-######################################
-######################################
-###### GRADUATE admission case #######
-######################################
-######################################
-######################################
-######################################
-######################################
+# Conditional Inference Tree: Math Performance
+cit <- ctree(math_perf~ ., data = traindata)
+plot(cit, main = "Conditional Inference Tree")
 
-# clear memory
-rm(list=ls())
+# Confusion matrix
+cm_mathcit = table(testdata$math_perf, round(predict(cit, newdata = testdata)), dnn = c("Actual", "Predicted"))
+cm_mathcit
 
-# reading in the data
-mydata <- read.delim("/Users/feder/Desktop/km_project/admission_predict.txt")
+# Predicted Approval rate
+cm_mathcit[4] / sum(cm_mathcit[, 2])
 
-# names of variables
-names(mydata)
+# Predicted Denial rate
+cm_mathcit[1] / sum(cm_mathcit[, 1])
 
-# checking for linearity (for each predictor against the dep variable) with scatterplots
-
-par(mfrow=c(3,3))
-
-scatter.smooth(x=mydata$GRE.Score, y=mydata$Chance.of.Admit, main="Chance of Admission ~ GRES Scores")  
-
-scatter.smooth(x=mydata$TOEFL.Score, y=mydata$Chance.of.Admit, main="Chance of Admission ~ TOEFL Scores") 
-
-scatter.smooth(x=mydata$University.Rating, y=mydata$Chance.of.Admit, main="Chance of Admission ~ University Ranking") 
-
-scatter.smooth(x=mydata$SOP, y=mydata$Chance.of.Admit, main="Chance of Admission ~ Statement of Purpose Strength") 
-
-scatter.smooth(x=mydata$LOR, y=mydata$Chance.of.Admit, main="Chance of Admission ~ Letter of Recommendation Strength") 
-
-scatter.smooth(x=mydata$CGPA, y=mydata$Chance.of.Admit, main="Chance of Admission ~ Undergraduate GPA") 
-
-scatter.smooth(x=mydata$Research, y=mydata$Chance.of.Admit, main="Chance of Admission ~ Research Experience") 
-
-# Checking for outliers with boxplots
-
-par(mfrow=c(2, 3))  
-boxplot(mydata$Chance.of.Admit, main="Chance of Admission", sub=paste("Outlier rows: ", boxplot.stats(mydata$Chance.of.Admit)$out))  
-boxplot(mydata$GRE.Score, main="GRE Scores", sub=paste("Outlier rows: ", boxplot.stats(mydata$GRE.Score)$out))  
-boxplot(mydata$TOEFL.Score, main="TOEFL Scores", sub=paste("Outlier rows: ", boxplot.stats(mydata$TOEFL.Score)$out))  
-boxplot(mydata$University.Rating, main="University Ranking", sub=paste("Outlier rows: ", boxplot.stats(mydata$University.Rating)$out))  
-boxplot(mydata$SOP, main="Statement of Purpose Strength", sub=paste("Outlier rows: ", boxplot.stats(mydata$SOP)$out))  
-boxplot(mydata$LOR, main="Letter of Recommendation Strength", sub=paste("Outlier rows: ", boxplot.stats(mydata$LOR)$out))  
-
-# Checking for normality with density plot
-
-library(e1071)
-par(mfrow=c(3, 3))
-plot(density(mydata$Chance.of.Admit), main="Chance of Admission", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$Chance.of.Admit), 2)))
-polygon(density(mydata$Chance.of.Admit), col="lightblue")
-plot(density(mydata$GRE.Score), main="GRE Scores", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$GRE.Score), 2)))
-polygon(density(mydata$GRE.Score), col="lightblue")
-plot(density(mydata$TOEFL.Score), main="TOEFL Scores", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$TOEFL.Score), 2)))
-polygon(density(mydata$TOEFL.Score), col="lightblue")
-plot(density(mydata$University.Rating), main="University Ranking", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$University.Rating), 2)))
-polygon(density(mydata$University.Rating), col="lightblue")
-plot(density(mydata$SOP), main="Statement of Purpose Strength", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$SOP), 2)))
-polygon(density(mydata$SOP), col="lightblue")
-plot(density(mydata$LOR), main="Letter of Recommendation Strength", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$LOR), 2)))
-polygon(density(mydata$LOR), col="lightblue")
-plot(density(mydata$Research), main="Research", ylab="Frequency", sub=paste("Skewness:", round(e1071::skewness(mydata$Research), 2)))
-polygon(density(mydata$Research), col="lightblue")
-
-# checking correlations: scatterplot matrix
-library(ggplot2)
-library(GGally)
-ggpairs(mydata)
-
-# Regression analysis
-fit1=lm(Chance.of.Admit ~ GRE.Score + TOEFL.Score + University.Rating + SOP + LOR + CGPA + Research, mydata)
-summary(fit1) # University Ranking and SOP are statistically insignificant, f-statistic lower
+# Accuracy
+accuracycit <- sum(diag(cm_mathcit)) / sum(cm_mathcit)
+accuracycit
 
 
-fit2=lm(Chance.of.Admit ~ GRE.Score + TOEFL.Score + LOR + CGPA + Research, mydata)
-summary(fit2)
-
-# create a table with  model outputs
-library('stargazer')
-stargazer(list(fit1, fit2),
-          title = "Testing regression models", 
-          covariate.labels = 'GRE.Score', 
-          out="table1.txt")
-
-# 3D visualization
-library(plotly)
-plot <- plot_ly(mydata, 
-                     x = ~CGPA, 
-                     y = ~Chance.of.Admit, 
-                     z = ~Research, 
-                     type = "scatter3d", 
-                     size = 0.02)
-plot
-
-# Subset: finding the best model for the data. Save for me 1 best model per subset size
-library(leaps)
-leaps<- regsubsets(Chance.of.Admit ~., data= mydata, nbest=1, method = "exhaustive")
-summary(leaps)
-
-# plot statistics by subset size (rsq, cp, adjr2, bic, rss)
-dev.off()
-library(car)
-par(mfrow=c(2, 2))
-
-subsets(leaps, statistic="bic")
-subsets(leaps, statistic="cp")
-subsets(leaps, statistic="adjr2")
-
-# clustering
-library(dplyr)
-library(ggplot2)
-library(RColorBrewer)
-
-## Create cluster using k-means, k = 3
-library(factoextra)
-?eclust
-admission.km <- eclust(mydata, "kmeans", k.max=3)
-
-# correlations using subset of variables (until 15 variables)
-library(ggplot2)
-library(GGally)
-mydata[,c("ldesemp","mdesemp")]
-mydata[,c("ldesemp","mdesemp","gender","sector","ambito","isocioa")]
-
-# initial regressions
-fit1=lm(mdesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa), data=mydata)
-summary(fit1)
-
-fit2=lm(ldesemp~ female + factor(sector)+ factor(ambito) + factor(isocioa),data=mydata)
-summary(fit2)
-
-# create a table with  model outputs
-library('stargazer')
-stargazer(list(fit1, fit2),
-          title = "Comparing Regression models", 
-          covariate.labels = 'Female', 
-          out="table3.txt")
